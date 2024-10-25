@@ -1,21 +1,27 @@
 import pygame
-from screens import main_menu
-from cfg import WIDTH, HEIGHT, screen
+from screens import main_menu, level1
+from cfg import WIDTH, HEIGHT, screen, running
+import cfg
 
 pygame.init()
 
 clock = pygame.time.Clock()
-game_state = 'menu'
 
 
-running = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
-    if game_state == "menu":
+    if cfg.state == "menu":
         main_menu.draw(screen)
+    elif cfg.state == "close":
+        running = False
+    elif cfg.state == "level1":
+        level1.draw(screen)
+    
+    print(cfg.state)
+
 
     pygame.display.update()
     clock.tick(60)

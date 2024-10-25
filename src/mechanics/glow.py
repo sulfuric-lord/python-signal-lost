@@ -6,7 +6,7 @@ import time
 class UnderGlow:
     def __init__(self, color, screen):
         self.color = color
-        self.iterations = 10
+        self.iterations = 16
         self.screen = screen
 
     def draw(self):
@@ -15,12 +15,12 @@ class UnderGlow:
             for j in self.color:
                 new_color.append(min(255, math.ceil(j / (i * 3))))
 
-            height_var = int(20 * math.sin(time.time()))
+            height_var = int(30 * (math.sin(time.time())))
 
             pygame.draw.rect(
                 self.screen, 
                 tuple(new_color), 
-                pygame.Rect(0, HEIGHT + 20 - i * 20 - height_var, WIDTH, 20)
+                pygame.Rect(0, HEIGHT + 50 - i * 50 - height_var, WIDTH, 50)
             )
         #Отладочные данные:
         #print(f"hv: {height_var}, time.time: {time.time()}, current_time: {current_time}, sin(time): {math.sin(time.time())}")
