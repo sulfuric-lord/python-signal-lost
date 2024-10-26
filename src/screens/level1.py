@@ -10,7 +10,7 @@ from mechanics.button import Button
 from mechanics.ingame.main_mechanic import Puzzle
 glow_color = (100, 50, 50)
 
-puzzle = Puzzle(2, 3, screen)
+puzzle = Puzzle(5, 5, screen)
 
 def draw(screen):
 
