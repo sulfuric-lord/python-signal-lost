@@ -1,92 +1,178 @@
 import pygame
 import math
 from cfg import HEIGHT, WIDTH
+from mechanics.button import Button
 
+
+class Laser:
+    def __init__(self, start_pos, is_one=True):
+        self.start_pos = start_pos
+        self.points = [start_pos]
+        self.is_one = is_one 
+        self.color = (0, 0, 255) if is_one else (255, 0, 0)
+
+    def add_point(self, point):
+        self.points.append(point)
+    
+    def draw(self, screen):
+        if len(self.points) > 1:
+            pygame.draw.lines(screen, self.color, False, self.points, 2)
 class Element:
     def __init__(self, screen, typeof, position) -> None:
         self.screen = screen
         self.typeof = typeof
-        self.color = (0, 0, 255)
-        self.radius = 15
+        if self.typeof == "DFLT":
+            self.color = (30, 30, 30)
+        elif self.typeof == "NOT":
+            self.color = (255, 0, 0)
+        elif self.typeof == "OR":
+            self.color = (0, 255, 0)
+        elif self.typeof == "AND":
+            self.color = (0, 0, 255)
+        elif self.typeof == "DBLR":
+            self.color = (255, 255, 0)
+        elif self.typeof == "SRC0":
+            self.color = (255, 0, 255)
+        elif self.typeof == "SRC1":
+            self.color = (255, 255, 255)
+        self.radius = 25
         self.position = position
-    
+
+    def process_laser(self, input_laser):
+        if self.typeof == "NOT":
+            return Laser(self.position, not input_laser.is_one)
+        elif self.typeof == "DFLT":
+            return Laser(self.position, input_laser.is_one)
+        elif self.typeof == "OR":
+            return Laser(self.position, input_laser.is_one or False)
+        elif self.typeof == "AND":
+            return Laser(self.position, input_laser.is_one and True)
+        return input_laser
+
+        
     def draw(self):
         pygame.draw.circle(self.screen, self.color, self.position, self.radius)
 
-class SpinAxis:
-    def __init__(self, x, y, up, down, screen) -> None:
-        self.x = x
-        self.y = y
-        self.up = up
-        self.down = down
-        self.screen = screen
-        self.radius = 10
-
-    def draw(self):
-        pygame.draw.circle(self.screen, (30, 30, 30), (self.x, self.y), self.radius)
-
 class Key:
-    def __init__(self, password, screen) -> None:
-        self.password = password
-        self.radius = 50
+    def __init__(self, screen):
         self.position = (700, 250)
         self.screen = screen
+        self.output_laser = None
+
+    def update_output(self, laser):
+        self.output_laser = laser
 
     def draw(self):
-        pygame.draw.circle(self.screen, (100, 100, 100), self.position, self.radius)
-
+        pygame.draw.circle(self.screen, (100, 100, 100), self.position, 50)
+        
 class Puzzle:
-    def __init__(self, rows, cols, screen) -> None:
+    def __init__(self, rows, cols, screen, logic_list, button_offset) -> None:
+        self.screen = screen
+        self.button_func = ""
         self.rows = rows
         self.cols = cols
+        self.logic_list = logic_list
+        self.button_offset = button_offset
 
-        new_width = WIDTH - 200
-        new_height = HEIGHT - 100
+        self.buttons_list = []
+        self.create_buttons()
 
-        cell_width = new_width // self.cols
-        cell_height = new_height // self.rows
+        self.elements_list = self.create_elements(logic_list)
 
-        start_x = (new_width - (cell_width * self.cols)) // 2 + cell_width // 2
-        start_y = (new_height - (cell_height * self.rows)) // 2 + cell_height // 2
+        self.key = Key(self.screen)
 
-        self.center_points = []
+        self.lasers = []
+        self.update_lasers()
 
+    def update_lasers(self):
+        self.lasers = []  
+
+        for row in range(self.rows):
+
+            start_element = self.elements_list[row * self.cols]
+            if start_element.typeof in ["SRC0", "SRC1"]:
+
+                is_one = start_element.typeof == "SRC1"
+                start_pos = start_element.position
+                current_laser = Laser(start_pos, is_one)
+
+                for col in range(self.cols):
+                    element = self.elements_list[row * self.cols + col]  
+                    current_laser.add_point(element.position)  
+                    current_laser = element.process_laser(current_laser)  
+
+
+                current_laser.add_point(self.key.position)
+                self.lasers.append(current_laser)
+                self.key.update_output(current_laser)
+
+
+    def create_buttons(self):
+        count_func = 1
+        for i in range(self.cols):
+            for j in range(self.rows - 1):
+                print("Кнопка сделана")
+                button_x = (WIDTH - 200) // self.cols * i + (WIDTH - 200) // self.cols // 2
+                button_y = (HEIGHT - 100) // self.rows * (j + 1)
+                top_element_index = j + i * self.rows
+                bottom_element_index = (j + 1) + i * self.rows
+                
+                self.buttons_list.append(
+                    Button(
+                        button_x - self.button_offset[0], 
+                        button_y - self.button_offset[1], 
+                        75, 25, 
+                        (255, 255, 255), 
+                        (200, 200, 200), 
+                        (100, 100, 100), 
+                        15, 
+                        self.screen, 
+                        (top_element_index, bottom_element_index),
+                        "Change"
+                    )
+                )
+                count_func += 1
+
+    def create_elements(self, logic_list):
+        elements_list = []
+        logic_list_counter = 0
         for i in range(self.cols):
             for j in range(self.rows):
-                self.center_points.append([start_x + cell_width * i, start_y + cell_height * j])
+                x = (WIDTH - 200) // self.cols * i + (WIDTH - 200) // self.cols // 2
+                y = (HEIGHT - 100) // self.rows * j + (HEIGHT - 100) // self.rows // 2
+                elements_list.append(Element(self.screen, logic_list[logic_list_counter], [x, y]))
+                logic_list_counter += 1
+        return elements_list
 
-        self.screen = screen
-        self.color = (50, 50, 50)
-        self.radius = 30
 
-        self.elements_position = self.calculate_element_positions()
+    def swap_logic_indexes(self, index1, index2):
 
-        self.key = Key(1, self.screen)
+        pos1 = self.elements_list[index1].position
+        pos2 = self.elements_list[index2].position
 
-    def calculate_element_positions(self):
-        angles = [math.pi / 2, 3 * math.pi / 2]
-        element_radius = self.radius
-        positions = []
+        self.elements_list[index1], self.elements_list[index2] = self.elements_list[index2], self.elements_list[index1]
+        
+        self.elements_list[index1].position = pos1
+        self.elements_list[index2].position = pos2
 
-        for cx, cy in self.center_points:
-            circle_positions = []
-            for angle in angles:
-                x = cx + element_radius * math.cos(angle)
-                y = cy + element_radius * math.sin(angle)
-                circle_positions.append((x, y))
-            positions.append(circle_positions)
-
-        return positions
+        self.update_lasers()
 
     def draw(self):
-        print(self.center_points)
+        
+        for element in self.elements_list:
+            element.draw()
+        
+        mouse_pos = pygame.mouse.get_pos()
+        mouse_pressed = pygame.mouse.get_pressed()
+        
+        for button in self.buttons_list:
+            button.check_inp(mouse_pos)
+            if button.click(mouse_pos, mouse_pressed):
+                indices = button.click_func 
+                self.swap_logic_indexes(indices[0], indices[1])
+            button.draw()
 
-        for center in self.center_points:
-            pygame.draw.circle(self.screen, self.color, tuple(center), self.radius)
-
-        for circle_elements in self.elements_position:
-            for pos in circle_elements:
-                element = Element(self.screen, "default", pos)
-                element.draw()
+        for laser in self.lasers:
+            laser.draw(self.screen)
 
         self.key.draw()

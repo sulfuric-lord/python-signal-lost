@@ -19,8 +19,6 @@ while running:
         running = False
     elif cfg.state == "level1":
         level1.draw(screen)
-    
-    print(cfg.state)
 
 
     pygame.display.update()
